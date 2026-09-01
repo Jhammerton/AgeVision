@@ -1,22 +1,29 @@
-"""Batch inference entry points."""
-
+"""Checkpoint loading and apparent-age inference."""
 from pathlib import Path
-from typing import Any
+import torch
+from PIL import Image
+from src.config import AGE_BINS, AGE_GROUPS, MODEL_DIR
+from src.preprocessing import build_transforms
+from src.train import build_model
 
-import joblib
-import pandas as pd
+class AgePredictor:
+    def __init__(self, checkpoint_path: Path | None = None):
+        checkpoint = torch.load(checkpoint_path or MODEL_DIR / "agevision_regression.pt",
+                                map_location="cpu", weights_only=True)
+        self.task = checkpoint["task"]
+        self.model = build_model(self.task, checkpoint["architecture"], pretrained=False)
+        self.model.load_state_dict(checkpoint["state_dict"])
+        self.model.eval()
+        self.transform = build_transforms(checkpoint.get("image_size", 224))
 
-from src.config import MODEL_DIR
-
-
-def load_model(path: Path | None = None) -> Any:
-    """Load a persisted training pipeline."""
-    return joblib.load(path or MODEL_DIR / "readmission_pipeline.joblib")
-
-
-def predict_readmission(model: Any, encounters: pd.DataFrame) -> pd.DataFrame:
-    """Add binary predictions and 30-day readmission probabilities."""
-    result = encounters.copy()
-    result["readmission_probability"] = model.predict_proba(encounters)[:, 1]
-    result["predicted_readmission"] = model.predict(encounters)
-    return result
+    @torch.inference_mode()
+    def predict(self, image: Image.Image) -> dict[str, object]:
+        output = self.model(self.transform(image.convert("RGB")).unsqueeze(0))
+        if self.task == "regression":
+            age = max(0.0, min(116.0, float(output.squeeze())))
+            return {"predicted_age": round(age, 1), "estimated_range": [
+                max(0, round(age - 4)), min(116, round(age + 4))]}
+        probabilities = output.softmax(1).squeeze(0)
+        index = int(probabilities.argmax())
+        return {"age_group": AGE_GROUPS[index], "confidence": round(float(probabilities[index]), 3),
+                "estimated_range": [AGE_BINS[index], AGE_BINS[index + 1] - 1]}

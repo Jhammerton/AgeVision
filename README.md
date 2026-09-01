@@ -1,41 +1,44 @@
-# Diabetes 30-Day Readmission ML System
+# AgeVision
 
-An end-to-end machine-learning project for predicting whether a diabetes-related
-hospital encounter will result in readmission within 30 days, using the UCI
-Diabetes 130-US Hospitals dataset.
+An end-to-end computer-vision system for estimating **apparent age** from a face image.
+AgeVision supports exact-age regression and age-group classification, reports uncertainty,
+and evaluates errors across age and demographic slices. It is a research/education project,
+not an identity, eligibility, or medical decision system.
 
-## Layout
+## System
 
 ```text
-.
-|-- configs/             # Reproducible experiment settings
-|-- data/
-|   |-- raw/             # Original UCI files (never modified)
-|   |-- interim/         # Validated and cleaned data
-|   `-- processed/       # Model-ready train/test datasets
-|-- models/              # Serialized pipelines and model artifacts
-|-- notebooks/           # Exploration only; production logic belongs in src
-|-- reports/
-|   `-- figures/         # Metrics, plots, and model reports
-|-- src/
-|   |-- config.py        # Paths and shared constants
-|   |-- ingestion.py     # Dataset acquisition/loading
-|   |-- validation.py    # Schema and quality checks
-|   |-- preprocessing.py # Cleaning and target creation
-|   |-- features.py      # Feature transformation pipeline
-|   |-- train.py         # Training and model persistence
-|   |-- evaluate.py      # Evaluation metrics
-|   `-- predict.py       # Batch inference
-|-- tests/               # Automated tests
-`-- pyproject.toml       # Package metadata and dependencies
+UTKFace images -> validate/split -> crop + normalize -> ResNet18 -> age estimate
+                                                               -> evaluation report
+Uploaded image -> FastAPI -> same transforms -> estimate + plausible range -> web UI
 ```
 
-## Getting started
+## Features
 
-1. Download the **Diabetes 130-US Hospitals for Years 1999-2008** dataset from UCI.
-2. Put `diabetic_data.csv` in `data/raw/`.
-3. Create an environment and install the project with `pip install -e ".[dev]"`.
-4. Run the tests with `pytest`.
+- UTKFace filename parsing and reproducible train/validation/test manifests
+- ResNet18 transfer learning or a small CNN baseline
+- Regression and age-group classification experiments
+- MAE, RMSE, error percentiles, and metrics by age, gender, and ethnicity labels
+- FastAPI image-upload endpoint and browser interface
+- Unit tests, Docker image, and GitHub Actions CI
 
-The initial model is a logistic-regression baseline. All preprocessing is kept
-inside the fitted scikit-learn pipeline to reduce training/serving skew and data leakage.
+## Quick start
+
+1. Use Python 3.10+ and install `pip install -e ".[dev]"`.
+2. Download UTKFace and place its `.jpg` files under `data/raw/UTKFace/`.
+3. Build manifests: `python -m src.ingestion --input data/raw/UTKFace`.
+4. Train: `python -m src.train --task regression --epochs 10`.
+5. Evaluate: `python -m src.evaluate --checkpoint models/agevision_regression.pt`.
+6. Serve: `uvicorn src.api:app --reload`, then open <http://localhost:8000>.
+
+Run `pytest` for tests. Training defaults live in `configs/model.yaml`; CLI flags can
+override the most common settings. The API returns HTTP 503 until a checkpoint exists.
+The upload flow expects a single, front-facing portrait; UTKFace itself contains aligned faces.
+
+## Dataset and responsible use
+
+UTKFace encodes `age_gender_race_...jpg` in filenames. Its labels and demographic
+categories have limitations and may not reflect self-identified attributes. Dataset splits
+are stratified by age group where possible. Always report per-slice results alongside the
+overall score. Predictions describe appearance only and must not be treated as chronological
+age or used for consequential decisions.

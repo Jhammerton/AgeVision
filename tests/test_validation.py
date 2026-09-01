@@ -1,14 +1,12 @@
-import pandas as pd
+from pathlib import Path
 import pytest
+from src.validation import parse_utkface_filename
 
-from src.validation import REQUIRED_COLUMNS, validate_raw_data
+def test_parses_utkface_filename() -> None:
+    record = parse_utkface_filename(Path("27_1_3_201701.jpg"))
+    assert (record["age"], record["gender"], record["ethnicity"]) == (27, 1, 3)
 
-
-def test_validation_rejects_missing_columns() -> None:
-    with pytest.raises(ValueError, match="Missing required columns"):
-        validate_raw_data(pd.DataFrame({"encounter_id": [1]}))
-
-
-def test_validation_accepts_minimal_valid_frame() -> None:
-    frame = pd.DataFrame({column: [1] for column in REQUIRED_COLUMNS})
-    validate_raw_data(frame)
+@pytest.mark.parametrize("name", ["bad.jpg", "200_0_0_x.jpg", "30_4_0_x.jpg"])
+def test_rejects_invalid_filename(name: str) -> None:
+    with pytest.raises(ValueError):
+        parse_utkface_filename(name)

@@ -1,1 +1,1 @@
-"""End-to-end hospital readmission prediction package."""
+"""AgeVision facial apparent-age estimation package."""
