@@ -1,0 +1,4 @@
+target: readmitted
+test_size: 0.20
+random_state: 42
+decision_threshold: 0.50
