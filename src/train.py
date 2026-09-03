@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision.models import (
     EfficientNet_B0_Weights,
     ResNet18_Weights,
@@ -52,8 +52,33 @@ def build_model(task="regression", architecture="resnet18", pretrained=True):
 
     raise ValueError(f"Unsupported architecture: {architecture}")
 
+def age_group_sample_weights(age_groups) -> torch.Tensor:
+    """Return moderate inverse-square-root weights for age-group sampling."""
+    groups = torch.tensor(age_groups, dtype=torch.long)
+    counts = torch.bincount(groups)
+    return counts[groups].double().rsqrt()
 
-def train(task: str, epochs: int, architecture: str, output: Path) -> None:
+
+def build_age_group_sampler(
+    dataset: FaceAgeDataset,
+) -> WeightedRandomSampler:
+    weights = age_group_sample_weights(
+        dataset.frame["age_group"].to_numpy()
+    )
+    return WeightedRandomSampler(
+        weights,
+        num_samples=len(weights),
+        replacement=True,
+    )
+
+
+def train(
+    task: str,
+    epochs: int,
+    architecture: str,
+    output: Path,
+    balanced_sampling: bool = False,
+) -> None:
     settings = load_settings()
     torch.manual_seed(settings.random_state)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -67,14 +92,27 @@ def train(task: str, epochs: int, architecture: str, output: Path) -> None:
         "num_workers": 0,
         "pin_memory": device.type == "cuda",
     }
-    train_loader = DataLoader(train_dataset, shuffle=True, **loader_options)
+    sampler = (
+        build_age_group_sampler(train_dataset)
+        if balanced_sampling
+        else None
+    )
+    train_loader = DataLoader(
+        train_dataset,
+        shuffle=sampler is None,
+        sampler=sampler,
+        **loader_options,
+    )
     validation_loader = DataLoader(validation_dataset, shuffle=False, **loader_options)
     loss_fn = nn.HuberLoss(delta=5.0) if task == "regression" else nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), settings.learning_rate,
                                   weight_decay=settings.weight_decay)
     output.parent.mkdir(parents=True, exist_ok=True)
     best_validation = float("inf")
-    print(f"device={device} architecture={architecture} task={task}")
+    print(
+        f"device={device} architecture={architecture} task={task} "
+        f"balanced_sampling={balanced_sampling}"
+    )
 
     for epoch in range(epochs):
         model.train()
@@ -132,11 +170,24 @@ def main() -> None:
     "--architecture",
     choices=("resnet18", "efficientnet_b0", "small_cnn"),
     default="resnet18",
-)
+    )
     parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument(
+        "--balanced-sampling",
+        action="store_true",
+        help="Moderately oversample underrepresented age groups",
+    )
     args = parser.parse_args()
-    output = MODEL_DIR / f"{args.architecture}_{args.task}.pt"
-    train(args.task, args.epochs, args.architecture, output)
+    suffix = "_balanced" if args.balanced_sampling else ""
+    output = MODEL_DIR / f"{args.architecture}_{args.task}{suffix}.pt"
+
+    train(
+        args.task,
+        args.epochs,
+        args.architecture,
+        output,
+        args.balanced_sampling,
+    )
 
 
 if __name__ == "__main__":

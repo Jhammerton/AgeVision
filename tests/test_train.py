@@ -2,7 +2,11 @@ import pytest
 from torch import nn
 from torchvision.models import EfficientNet, ResNet
 
-from src.train import SmallAgeCNN, build_model
+from src.train import (
+    SmallAgeCNN,
+    age_group_sample_weights,
+    build_model,
+)
 
 
 @pytest.mark.parametrize(
@@ -31,3 +35,10 @@ def test_regression_model_has_one_output(
 def test_unsupported_architecture_raises_error() -> None:
     with pytest.raises(ValueError, match="Unsupported architecture"):
         build_model("regression", "unknown", pretrained=False)
+
+
+def test_rare_age_groups_receive_larger_sampling_weights() -> None:
+    weights = age_group_sample_weights([0, 0, 0, 0, 1])
+
+    assert weights[0].item() == pytest.approx(0.5)
+    assert weights[-1].item() == pytest.approx(1.0)
