@@ -39,17 +39,30 @@ def train(task: str, epochs: int, architecture: str, output: Path) -> None:
     torch.manual_seed(settings.random_state)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = build_model(task, architecture, settings.pretrained).to(device)
-    dataset = FaceAgeDataset(PROCESSED_DATA_DIR / "train.csv",
-                             build_transforms(settings.image_size, True), task)
-    loader = DataLoader(dataset, settings.batch_size, shuffle=True, num_workers=0)
-    loss_fn = nn.L1Loss() if task == "regression" else nn.CrossEntropyLoss()
+    train_dataset = FaceAgeDataset(PROCESSED_DATA_DIR / "train.csv",
+                                   build_transforms(settings.image_size, True), task)
+    validation_dataset = FaceAgeDataset(PROCESSED_DATA_DIR / "validation.csv",
+                                        build_transforms(settings.image_size), task)
+    loader_options = {
+        "batch_size": settings.batch_size,
+        "num_workers": 0,
+        "pin_memory": device.type == "cuda",
+    }
+    train_loader = DataLoader(train_dataset, shuffle=True, **loader_options)
+    validation_loader = DataLoader(validation_dataset, shuffle=False, **loader_options)
+    loss_fn = nn.HuberLoss(delta=5.0) if task == "regression" else nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), settings.learning_rate,
                                   weight_decay=settings.weight_decay)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    best_validation = float("inf")
+    print(f"device={device} architecture={architecture} task={task}")
+
     for epoch in range(epochs):
         model.train()
-        total = 0.0
-        for images, targets in loader:
-            images, targets = images.to(device), targets.to(device)
+        training_loss = 0.0
+        for images, targets in train_loader:
+            images = images.to(device, non_blocking=True)
+            targets = targets.to(device, non_blocking=True)
             predictions = model(images)
             if task == "regression":
                 predictions = predictions.squeeze(1)
@@ -57,11 +70,40 @@ def train(task: str, epochs: int, architecture: str, output: Path) -> None:
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            total += loss.item() * len(images)
-        print(f"epoch={epoch + 1} loss={total / len(dataset):.4f}")
-    output.parent.mkdir(parents=True, exist_ok=True)
-    torch.save({"state_dict": model.state_dict(), "task": task,
-                "architecture": architecture, "image_size": settings.image_size}, output)
+            training_loss += loss.item() * len(images)
+
+        model.eval()
+        validation_error = 0.0
+        validation_correct = 0
+        with torch.inference_mode():
+            for images, targets in validation_loader:
+                images = images.to(device, non_blocking=True)
+                targets = targets.to(device, non_blocking=True)
+                predictions = model(images)
+                if task == "regression":
+                    predictions = predictions.squeeze(1).clamp(0, 116)
+                    validation_error += torch.abs(predictions - targets).sum().item()
+                else:
+                    validation_correct += (predictions.argmax(1) == targets).sum().item()
+
+        training_loss /= len(train_dataset)
+        validation_metric = (
+            validation_error / len(validation_dataset)
+            if task == "regression"
+            else 1.0 - validation_correct / len(validation_dataset)
+        )
+        metric_name = "val_mae" if task == "regression" else "val_error"
+        print(
+            f"epoch={epoch + 1} train_loss={training_loss:.4f} "
+            f"{metric_name}={validation_metric:.4f}"
+        )
+
+        if validation_metric < best_validation:
+            best_validation = validation_metric
+            torch.save({"state_dict": model.state_dict(), "task": task,
+                        "architecture": architecture, "image_size": settings.image_size,
+                        "epoch": epoch + 1, "validation_metric": validation_metric}, output)
+            print(f"saved_best={output}")
 
 
 def main() -> None:
@@ -70,7 +112,8 @@ def main() -> None:
     parser.add_argument("--architecture", choices=("resnet18", "small_cnn"), default="resnet18")
     parser.add_argument("--epochs", type=int, default=10)
     args = parser.parse_args()
-    train(args.task, args.epochs, args.architecture, MODEL_DIR / f"agevision_{args.task}.pt")
+    output = MODEL_DIR / f"{args.architecture}_{args.task}.pt"
+    train(args.task, args.epochs, args.architecture, output)
 
 
 if __name__ == "__main__":

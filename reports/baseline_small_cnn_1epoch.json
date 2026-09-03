@@ -1,0 +1,112 @@
+{
+  "overall": {
+    "mae": 16.09,
+    "rmse": 21.423,
+    "median_absolute_error": 12.0,
+    "p90_absolute_error": 34.4
+  },
+  "by_age_group": {
+    "0": {
+      "mae": 23.143,
+      "rmse": 23.765,
+      "median_absolute_error": 23.6,
+      "p90_absolute_error": 29.49,
+      "samples": 512
+    },
+    "1": {
+      "mae": 12.118,
+      "rmse": 13.113,
+      "median_absolute_error": 12.5,
+      "p90_absolute_error": 17.64,
+      "samples": 177
+    },
+    "2": {
+      "mae": 6.012,
+      "rmse": 7.565,
+      "median_absolute_error": 5.2,
+      "p90_absolute_error": 12.09,
+      "samples": 1102
+    },
+    "3": {
+      "mae": 6.405,
+      "rmse": 7.833,
+      "median_absolute_error": 5.75,
+      "p90_absolute_error": 12.5,
+      "samples": 680
+    },
+    "4": {
+      "mae": 15.016,
+      "rmse": 16.157,
+      "median_absolute_error": 14.8,
+      "p90_absolute_error": 22.44,
+      "samples": 337
+    },
+    "5": {
+      "mae": 26.312,
+      "rmse": 27.009,
+      "median_absolute_error": 26.7,
+      "p90_absolute_error": 34.2,
+      "samples": 345
+    },
+    "6": {
+      "mae": 44.923,
+      "rmse": 46.411,
+      "median_absolute_error": 43.2,
+      "p90_absolute_error": 60.5,
+      "samples": 403
+    }
+  },
+  "by_gender": {
+    "0": {
+      "mae": 17.062,
+      "rmse": 21.986,
+      "median_absolute_error": 14.0,
+      "p90_absolute_error": 35.8,
+      "samples": 1865
+    },
+    "1": {
+      "mae": 15.018,
+      "rmse": 20.785,
+      "median_absolute_error": 10.4,
+      "p90_absolute_error": 32.3,
+      "samples": 1691
+    }
+  },
+  "by_ethnicity": {
+    "0": {
+      "mae": 19.36,
+      "rmse": 25.026,
+      "median_absolute_error": 15.8,
+      "p90_absolute_error": 41.8,
+      "samples": 1509
+    },
+    "1": {
+      "mae": 11.215,
+      "rmse": 15.805,
+      "median_absolute_error": 7.45,
+      "p90_absolute_error": 27.27,
+      "samples": 692
+    },
+    "2": {
+      "mae": 15.65,
+      "rmse": 20.859,
+      "median_absolute_error": 11.5,
+      "p90_absolute_error": 32.52,
+      "samples": 525
+    },
+    "3": {
+      "mae": 14.486,
+      "rmse": 18.844,
+      "median_absolute_error": 10.55,
+      "p90_absolute_error": 30.21,
+      "samples": 610
+    },
+    "4": {
+      "mae": 14.495,
+      "rmse": 17.718,
+      "median_absolute_error": 13.3,
+      "p90_absolute_error": 27.9,
+      "samples": 220
+    }
+  }
+}
