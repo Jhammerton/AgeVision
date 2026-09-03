@@ -47,6 +47,7 @@ def test_health_and_prediction_with_installed_model(monkeypatch, tmp_path) -> No
     assert "Drop a portrait here" in page.text
     assert "Take a picture" in page.text
     assert "getUserMedia" in page.text
+    assert 'type="file" accept="image/jpeg,image/png,image/webp" required' not in page.text
     assert response.status_code == 200
     assert response.json() == {
         "predicted_age": 31.5,
