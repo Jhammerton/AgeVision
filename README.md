@@ -22,6 +22,7 @@ Uploaded image -> FastAPI -> same transforms -> estimate + plausible range -> we
 - Regression and age-group classification experiments
 - MAE, RMSE, error percentiles, and metrics by age, gender, and ethnicity labels
 - FastAPI image-upload endpoint and browser interface
+- Portrait upload or in-browser camera capture
 - Unit tests, Docker image, and GitHub Actions CI
 
 ## Quick start

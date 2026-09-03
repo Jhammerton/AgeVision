@@ -24,6 +24,7 @@
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; overflow-x: hidden; background: radial-gradient(circle at 80% 8%, #d9eee7, transparent 32%), #f3f7f4; }
     button, input { font: inherit; }
+    [hidden] { display: none !important; }
     button:focus-visible, input:focus-visible, .drop-zone:focus-visible { outline: 3px solid #73b9ab; outline-offset: 3px; }
 
     .shell { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 56px; }
@@ -59,6 +60,13 @@
     .action { width: 100%; min-height: 54px; margin-top: 16px; border: 0; border-radius: 15px; color: white; background: var(--accent); font-weight: 800; cursor: pointer; transition: background .2s, transform .2s; }
     .action:hover { background: var(--accent-dark); transform: translateY(-1px); }
     .action:disabled { cursor: wait; opacity: .65; transform: none; }
+    .source-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    .secondary { min-height: 46px; border: 1px solid var(--line); border-radius: 13px; color: var(--ink); background: white; font-weight: 750; cursor: pointer; }
+    .secondary:hover { border-color: var(--accent); color: var(--accent-dark); }
+    .camera-panel { margin-top: 14px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: #07131f; }
+    #camera { display: block; width: 100%; max-height: 360px; object-fit: cover; transform: scaleX(-1); }
+    .camera-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; background: white; }
+    .camera-controls button:first-child { color: white; border-color: var(--accent); background: var(--accent); }
     .message { display: none; margin-top: 16px; padding: 18px; border-radius: 15px; }
     .message.visible { display: block; }
     .message.error { color: var(--error); background: #fff0f0; }
@@ -77,6 +85,7 @@
       .facts { margin-bottom: 4px; }
       .drop-zone, #preview { min-height: 300px; height: 300px; }
       .drop-copy { max-width: 100%; padding: 24px 16px; }
+      .source-actions { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -110,6 +119,18 @@
             <img id="preview" alt="Selected portrait preview">
             <span class="replace">Choose another</span>
           </label>
+          <div class="source-actions">
+            <button class="secondary" id="upload-button" type="button">Choose a file</button>
+            <button class="secondary" id="camera-button" type="button">Take a picture</button>
+          </div>
+          <div class="camera-panel" id="camera-panel" hidden>
+            <video id="camera" autoplay muted playsinline aria-label="Camera preview"></video>
+            <div class="camera-controls">
+              <button class="secondary" id="capture-button" type="button">Capture photo</button>
+              <button class="secondary" id="cancel-camera" type="button">Cancel</button>
+            </div>
+          </div>
+          <canvas id="camera-canvas" hidden></canvas>
           <button class="action" id="submit" type="submit">Estimate apparent age</button>
         </form>
 
@@ -131,11 +152,21 @@
     const fileInput = document.querySelector('#file');
     const dropZone = document.querySelector('#drop-zone');
     const preview = document.querySelector('#preview');
+    const uploadButton = document.querySelector('#upload-button');
+    const cameraButton = document.querySelector('#camera-button');
+    const cameraPanel = document.querySelector('#camera-panel');
+    const camera = document.querySelector('#camera');
+    const cameraCanvas = document.querySelector('#camera-canvas');
+    const captureButton = document.querySelector('#capture-button');
+    const cancelCameraButton = document.querySelector('#cancel-camera');
     const submit = document.querySelector('#submit');
     const result = document.querySelector('#result');
     const error = document.querySelector('#error');
     const ageValue = document.querySelector('#age-value');
     const benchmark = document.querySelector('#benchmark');
+    let selectedFile = null;
+    let cameraStream = null;
+    let previewUrl = null;
 
     function showFile(file) {
       if (!file) return;
@@ -147,7 +178,10 @@
         showError('That image is larger than the 10 MB upload limit.');
         return;
       }
-      preview.src = URL.createObjectURL(file);
+      selectedFile = file;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(file);
+      preview.src = previewUrl;
       dropZone.classList.add('has-preview');
       result.classList.remove('visible');
       error.classList.remove('visible');
@@ -159,7 +193,51 @@
       error.classList.add('visible');
     }
 
+    function stopCamera() {
+      if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+      camera.srcObject = null;
+      cameraPanel.hidden = true;
+    }
+
     fileInput.addEventListener('change', () => showFile(fileInput.files[0]));
+    uploadButton.addEventListener('click', () => fileInput.click());
+    cameraButton.addEventListener('click', async () => {
+      result.classList.remove('visible');
+      error.classList.remove('visible');
+      if (!navigator.mediaDevices?.getUserMedia) {
+        showError('Camera capture is not supported by this browser. Choose a file instead.');
+        return;
+      }
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' },
+          audio: false
+        });
+        camera.srcObject = cameraStream;
+        cameraPanel.hidden = false;
+      } catch (cameraError) {
+        showError('Camera access was unavailable. Allow camera permission or choose a file.');
+      }
+    });
+    cancelCameraButton.addEventListener('click', stopCamera);
+    captureButton.addEventListener('click', () => {
+      if (!camera.videoWidth || !camera.videoHeight) {
+        showError('The camera is still starting. Try again in a moment.');
+        return;
+      }
+      cameraCanvas.width = camera.videoWidth;
+      cameraCanvas.height = camera.videoHeight;
+      const context = cameraCanvas.getContext('2d');
+      context.translate(cameraCanvas.width, 0);
+      context.scale(-1, 1);
+      context.drawImage(camera, 0, 0);
+      cameraCanvas.toBlob(blob => {
+        if (!blob) return showError('The photo could not be captured. Please try again.');
+        showFile(new File([blob], 'camera-portrait.jpg', { type: 'image/jpeg' }));
+        stopCamera();
+      }, 'image/jpeg', 0.92);
+    });
     dropZone.addEventListener('keydown', event => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
@@ -185,13 +263,15 @@
 
     form.addEventListener('submit', async event => {
       event.preventDefault();
-      if (!fileInput.files[0]) return showError('Choose a portrait first.');
+      if (!selectedFile) return showError('Upload or take a portrait first.');
       submit.disabled = true;
       submit.textContent = 'Analyzing portrait…';
       result.classList.remove('visible');
       error.classList.remove('visible');
       try {
-        const response = await fetch('/api/v1/predict', { method: 'POST', body: new FormData(form) });
+        const formData = new FormData();
+        formData.append('file', selectedFile, selectedFile.name);
+        const response = await fetch('/api/v1/predict', { method: 'POST', body: formData });
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || 'The image could not be analyzed.');
         ageValue.textContent = data.predicted_age;
@@ -216,6 +296,7 @@
         submit.disabled = true;
       }
     }).catch(() => document.querySelector('#status-text').textContent = 'Service unavailable');
+    window.addEventListener('pagehide', stopCamera);
   </script>
 </body>
 </html>
