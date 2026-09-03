@@ -2,8 +2,10 @@
 
 import argparse
 from pathlib import Path
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
+
 from src.config import AGE_BINS, PROCESSED_DATA_DIR, RAW_DATA_DIR
 from src.validation import parse_utkface_filename
 

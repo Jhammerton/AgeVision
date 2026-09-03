@@ -1,6 +1,7 @@
 """Validation for UTKFace records and uploaded images."""
 
 from pathlib import Path
+
 from PIL import Image, UnidentifiedImageError
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024

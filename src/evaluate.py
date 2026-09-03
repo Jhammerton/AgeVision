@@ -2,11 +2,14 @@
 import argparse
 import json
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from PIL import Image
+
 from src.config import PROCESSED_DATA_DIR, REPORT_DIR
 from src.predict import AgePredictor
+
 
 def regression_metrics(actual, predicted) -> dict[str, float]:
     actual, predicted = np.asarray(actual, float), np.asarray(predicted, float)

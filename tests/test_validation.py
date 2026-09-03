@@ -1,6 +1,9 @@
 from pathlib import Path
+
 import pytest
+
 from src.validation import parse_utkface_filename
+
 
 def test_parses_utkface_filename() -> None:
     record = parse_utkface_filename(Path("27_1_3_201701.jpg"))

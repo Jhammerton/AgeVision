@@ -2,6 +2,7 @@
 
 import argparse
 from pathlib import Path
+
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, WeightedRandomSampler
@@ -11,6 +12,7 @@ from torchvision.models import (
     efficientnet_b0,
     resnet18,
 )
+
 from src.config import MODEL_DIR, PROCESSED_DATA_DIR, load_settings
 from src.features import FaceAgeDataset
 from src.preprocessing import build_transforms
