@@ -14,5 +14,6 @@ data/processed/*
 !data/processed/.gitkeep
 models/*
 !models/.gitkeep
+!models/agevision_regression.pt
 reports/figures/*
 !reports/figures/.gitkeep

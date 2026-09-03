@@ -1,10 +1,16 @@
 """Checkpoint loading and apparent-age inference."""
 from pathlib import Path
+
 import torch
 from PIL import Image
+
 from src.config import AGE_BINS, AGE_GROUPS, MODEL_DIR
 from src.preprocessing import build_transforms
 from src.train import build_model
+
+REGRESSION_MAE_YEARS = 5.2
+REGRESSION_P90_ERROR_YEARS = 11.5
+
 
 class AgePredictor:
     def __init__(self, checkpoint_path: Path | None = None):
@@ -21,8 +27,11 @@ class AgePredictor:
         output = self.model(self.transform(image.convert("RGB")).unsqueeze(0))
         if self.task == "regression":
             age = max(0.0, min(116.0, float(output.squeeze())))
-            return {"predicted_age": round(age, 1), "estimated_range": [
-                max(0, round(age - 4)), min(116, round(age + 4))]}
+            return {
+                "predicted_age": round(age, 1),
+                "typical_error_years": REGRESSION_MAE_YEARS,
+                "p90_error_years": REGRESSION_P90_ERROR_YEARS,
+            }
         probabilities = output.softmax(1).squeeze(0)
         index = int(probabilities.argmax())
         return {"age_group": AGE_GROUPS[index], "confidence": round(float(probabilities[index]), 3),

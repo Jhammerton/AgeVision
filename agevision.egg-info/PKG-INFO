@@ -7,6 +7,7 @@ Requires-Dist: fastapi>=0.110
 Requires-Dist: numpy>=1.24
 Requires-Dist: pandas>=2.0
 Requires-Dist: pillow>=10.0
+Requires-Dist: opencv-python-headless<5,>=4.10
 Requires-Dist: python-multipart>=0.0.9
 Requires-Dist: pyyaml>=6.0
 Requires-Dist: scikit-learn>=1.3
