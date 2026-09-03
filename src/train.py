@@ -5,7 +5,12 @@ from pathlib import Path
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from torchvision.models import ResNet18_Weights, resnet18
+from torchvision.models import (
+    EfficientNet_B0_Weights,
+    ResNet18_Weights,
+    efficientnet_b0,
+    resnet18,
+)
 from src.config import MODEL_DIR, PROCESSED_DATA_DIR, load_settings
 from src.features import FaceAgeDataset
 from src.preprocessing import build_transforms
@@ -26,12 +31,26 @@ class SmallAgeCNN(nn.Module):
 
 def build_model(task="regression", architecture="resnet18", pretrained=True):
     outputs = 1 if task == "regression" else 7
+
     if architecture == "small_cnn":
         return SmallAgeCNN(outputs)
-    weights = ResNet18_Weights.DEFAULT if pretrained else None
-    model = resnet18(weights=weights)
-    model.fc = nn.Linear(model.fc.in_features, outputs)
-    return model
+
+    if architecture == "resnet18":
+        weights = ResNet18_Weights.DEFAULT if pretrained else None
+        model = resnet18(weights=weights)
+        model.fc = nn.Linear(model.fc.in_features, outputs)
+        return model
+
+    if architecture == "efficientnet_b0":
+        weights = EfficientNet_B0_Weights.DEFAULT if pretrained else None
+        model = efficientnet_b0(weights=weights)
+        model.classifier[1] = nn.Linear(
+            model.classifier[1].in_features,
+            outputs,
+        )
+        return model
+
+    raise ValueError(f"Unsupported architecture: {architecture}")
 
 
 def train(task: str, epochs: int, architecture: str, output: Path) -> None:
@@ -109,7 +128,11 @@ def train(task: str, epochs: int, architecture: str, output: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", choices=("regression", "classification"), default="regression")
-    parser.add_argument("--architecture", choices=("resnet18", "small_cnn"), default="resnet18")
+    parser.add_argument(
+    "--architecture",
+    choices=("resnet18", "efficientnet_b0", "small_cnn"),
+    default="resnet18",
+)
     parser.add_argument("--epochs", type=int, default=10)
     args = parser.parse_args()
     output = MODEL_DIR / f"{args.architecture}_{args.task}.pt"
