@@ -19,6 +19,7 @@ def regression_predictor(value: float) -> AgePredictor:
     predictor.task = "regression"
     predictor.model = ConstantModel(value)
     predictor.transform = lambda image: torch.zeros(3, 8, 8)
+    predictor.calibration = None
     return predictor
 
 
@@ -27,11 +28,20 @@ def test_regression_prediction_reports_benchmark_error() -> None:
 
     assert result == {
         "predicted_age": 31.5,
-        "typical_error_years": 5.2,
-        "p90_error_years": 11.5,
+        "typical_error_years": 5.0,
+        "p90_error_years": 11.6,
     }
 
 
 def test_regression_prediction_is_clamped_to_supported_ages() -> None:
     assert regression_predictor(-10).predict(Image.new("RGB", (8, 8)))["predicted_age"] == 0
     assert regression_predictor(150).predict(Image.new("RGB", (8, 8)))["predicted_age"] == 116
+
+
+def test_regression_prediction_applies_calibration() -> None:
+    predictor = regression_predictor(32)
+    predictor.calibration = {"slope": 1.1, "intercept": -8.0}
+
+    result = predictor.predict(Image.new("RGB", (8, 8)))
+
+    assert result["predicted_age"] == 27.2

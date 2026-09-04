@@ -57,10 +57,12 @@ Five-epoch regression experiments on the current UTKFace split produced:
 | ResNet18 | 5.251 | 7.452 | 8.245 |
 | EfficientNet-B0 | **5.204** | **7.133** | **7.176** |
 | ResNet18 with balanced sampling | 5.296 | 7.470 | 9.289 |
+| EfficientNet-B0, 10-epoch run through YuNet | **4.956** | **7.124** | 8.076 |
 
 Moderate balanced sampling did not improve the overall or 60+ result in this run, so
-EfficientNet-B0 remains the strongest evaluated checkpoint. Full overall and sliced metrics
-are stored in `reports/`.
+the epoch-9 EfficientNet-B0 checkpoint from the 10-epoch run is deployed. It improves
+overall and young-adult accuracy, though older-adult error remains an important limitation.
+Full overall and sliced metrics are stored in `reports/`.
 
 ## Deploy on Render
 
