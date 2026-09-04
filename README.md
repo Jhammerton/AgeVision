@@ -5,12 +5,14 @@ AgeVision supports exact-age regression and age-group classification, reports un
 and evaluates errors across age and demographic slices. It is a research/education project,
 not an identity, eligibility, or medical decision system.
 
+**Live application:** [agevision.onrender.com](https://agevision.onrender.com)
+
 ## System
 
 ```text
-UTKFace images -> validate/split -> crop + normalize -> ResNet18 -> age estimate
-                                                               -> evaluation report
-Uploaded image -> FastAPI -> same transforms -> estimate + plausible range -> web UI
+UTKFace images -> validate/split -> crop + normalize -> EfficientNet-B0 -> age estimate
+                                                                      -> evaluation report
+Uploaded image -> YuNet face detection -> FastAPI -> same transforms -> estimate -> web UI
 ```
 
 ## Features
@@ -64,6 +66,12 @@ the epoch-9 EfficientNet-B0 checkpoint from the 10-epoch run is deployed. It imp
 overall and young-adult accuracy, though older-adult error remains an important limitation.
 Full overall and sliced metrics are stored in `reports/`.
 
+Further model work does not require collecting photographs or ages from application users.
+Possible next experiments include stronger augmentation, learning-rate scheduling, early
+stopping, age-aware loss weighting, and evaluation on an appropriately licensed public age
+dataset. Any candidate should be compared with the deployed checkpoint using the fixed test
+split and per-age-group metrics, especially the 60+ MAE.
+
 ## Deploy on Render
 
 The repository includes a `render.yaml` Blueprint for a Docker-based Render web service.
@@ -81,4 +89,5 @@ UTKFace encodes `age_gender_race_...jpg` in filenames. Its labels and demographi
 categories have limitations and may not reflect self-identified attributes. Dataset splits
 are stratified by age group where possible. Always report per-slice results alongside the
 overall score. Predictions describe appearance only and must not be treated as chronological
-age or used for consequential decisions.
+age or used for consequential decisions. Uploaded images are processed in memory for the
+prediction request and are not intentionally retained by the application.
