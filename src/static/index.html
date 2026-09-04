@@ -87,6 +87,60 @@
       .drop-copy { max-width: 100%; padding: 24px 16px; }
       .source-actions { grid-template-columns: 1fr; }
     }
+    /* A deliberately playful photo-booth skin. */
+    :root {
+      font-family: "Trebuchet MS", "Arial Rounded MT Bold", Arial, sans-serif;
+      --ink: #17151f;
+      --muted: #625e6c;
+      --accent: #7657e8;
+      --accent-dark: #5034b7;
+      --line: #17151f;
+      --paper: #fffdf7;
+    }
+    body {
+      background-color: #fff8e8;
+      background-image: radial-gradient(#17151f17 1.2px, transparent 1.2px);
+      background-size: 22px 22px;
+    }
+    button:focus-visible, input:focus-visible, .drop-zone:focus-visible { outline-color: #ffd84d; }
+    .shell { width: min(1160px, calc(100% - 32px)); padding-top: 26px; }
+    header { margin-bottom: 54px; }
+    .brand { font-size: 1.08rem; font-weight: 900; letter-spacing: -.04em; }
+    .brand-mark { width: 40px; height: 40px; border: 2px solid var(--ink); border-radius: 50%; background: #ff6b57; box-shadow: 3px 3px 0 var(--ink); transform: rotate(-7deg); }
+    .status { padding: 8px 12px; border: 2px solid var(--ink); border-radius: 999px; color: var(--ink); background: var(--paper); font-size: .78rem; font-weight: 800; box-shadow: 2px 2px 0 var(--ink); }
+    main { grid-template-columns: minmax(0, .9fr) minmax(420px, 1.1fr); }
+    .eyebrow { display: inline-block; padding: 7px 11px; border: 2px solid var(--ink); color: var(--ink); background: #ffd84d; letter-spacing: .08em; box-shadow: 3px 3px 0 var(--ink); transform: rotate(-2deg); }
+    h1 { margin: 20px 0; font-family: inherit; font-size: clamp(3.7rem, 7.4vw, 7rem); font-weight: 900; line-height: .82; letter-spacing: -.075em; }
+    h1 span { position: relative; display: inline-block; color: var(--accent); text-shadow: 4px 4px 0 #d9ccff; transform: rotate(-2deg); }
+    .intro { line-height: 1.62; }
+    .tiny-note { margin-top: 16px; color: var(--ink); font-size: .82rem; font-weight: 800; }
+    .facts { gap: 12px; margin-top: 30px; }
+    .fact { padding: 12px 15px; border: 2px solid var(--ink); background: var(--paper); box-shadow: 3px 3px 0 var(--ink); }
+    .fact:first-child { transform: rotate(1.5deg); }
+    .fact:last-child { background: #a8e6cf; transform: rotate(-1deg); }
+    .fact strong { font-size: 1.12rem; }
+    .card-wrap { position: relative; }
+    .sticker { position: absolute; z-index: 2; right: -23px; top: -27px; width: 82px; height: 82px; display: grid; place-items: center; border: 2px solid var(--ink); border-radius: 50%; background: #ffd84d; font-size: .7rem; font-weight: 900; line-height: 1.05; text-align: center; text-transform: uppercase; box-shadow: 4px 4px 0 var(--ink); transform: rotate(10deg); }
+    .card { padding: clamp(18px, 3vw, 30px); border: 3px solid var(--ink); border-radius: 24px 24px 36px 20px; background: var(--paper); box-shadow: 10px 11px 0 var(--ink); backdrop-filter: none; }
+    .drop-zone { min-height: 350px; border: 3px dashed var(--accent); border-radius: 16px; background: #f2edff; }
+    .drop-zone:hover, .drop-zone.dragging { border-color: var(--accent-dark); background: #e8dfff; transform: rotate(-.5deg) scale(1.006); }
+    .upload-icon { width: 68px; height: 68px; border: 3px solid var(--ink); border-radius: 50%; color: white; background: #ff6b57; font-weight: 900; box-shadow: 4px 4px 0 var(--ink); }
+    .drop-copy strong { font-size: 1.15rem; }
+    .replace { border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+    .secondary { border: 2px solid var(--ink); border-radius: 11px; font-weight: 900; }
+    .secondary:hover { border-color: var(--ink); color: var(--accent-dark); background: #ffd84d; }
+    .action { border: 2px solid var(--ink); border-radius: 13px; background: var(--accent); font-weight: 900; box-shadow: 4px 4px 0 var(--ink); }
+    .action:hover { background: var(--accent-dark); transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+    .camera-panel { border: 3px solid var(--ink); border-radius: 15px; }
+    .camera-controls button:first-child { background: var(--accent); }
+    .result { border: 2px solid var(--ink); background: #a8e6cf; box-shadow: 4px 4px 0 var(--ink); transform: rotate(-.5deg); }
+    .result-label { color: var(--ink); font-weight: 900; }
+    .age { font-family: inherit; font-size: 4rem; font-weight: 900; letter-spacing: -.06em; }
+    footer { border-top: 2px solid var(--ink); }
+    @media (max-width: 780px) {
+      main { grid-template-columns: 1fr; }
+      .sticker { right: -8px; top: -38px; width: 70px; height: 70px; }
+    }
   </style>
 </head>
 <body>
@@ -98,22 +152,25 @@
 
     <main>
       <section>
-        <div class="eyebrow">Responsible computer vision</div>
-        <h1>How old do you look?</h1>
-        <p class="intro">Upload one clear, front-facing portrait. AgeVision finds the face and estimates its apparent age using a model trained on UTKFace.</p>
+        <div class="eyebrow">The mildly nosy photo booth</div>
+        <h1>How old do <span>you</span> look?</h1>
+        <p class="intro">Drop in a clear, front-facing portrait and let the model take a guess. Good lighting helps. Birthday candles do not.</p>
+        <p class="tiny-note">No sign-up. No photo collection. Just one educated guess.</p>
         <div class="facts" aria-label="Model performance">
           <div class="fact"><strong>5.0 years</strong><span>mean test error</span></div>
           <div class="fact"><strong>11.6 years</strong><span>90th-percentile error</span></div>
         </div>
       </section>
 
+      <div class="card-wrap">
+        <div class="sticker" aria-hidden="true">Okay,<br>guess!</div>
       <section class="card" aria-label="Age estimation form">
         <form id="form">
           <label class="drop-zone" id="drop-zone" tabindex="0" for="file">
             <span class="drop-copy">
               <span class="upload-icon" aria-hidden="true">↑</span>
               <strong>Drop a portrait here</strong>
-              <span>or click to choose a JPEG, PNG, or WebP · max 10 MB</span>
+              <span>Give us your best mugshot · JPEG, PNG, or WebP · max 10 MB</span>
             </span>
             <input id="file" name="file" type="file" accept="image/jpeg,image/png,image/webp">
             <img id="preview" alt="Selected portrait preview">
@@ -131,7 +188,7 @@
             </div>
           </div>
           <canvas id="camera-canvas" hidden></canvas>
-          <button class="action" id="submit" type="submit">Estimate apparent age</button>
+          <button class="action" id="submit" type="submit">Take your best guess</button>
         </form>
 
         <div class="message result" id="result" aria-live="polite">
@@ -142,6 +199,7 @@
         <div class="message error" id="error" role="alert"></div>
         <div class="privacy"><span aria-hidden="true">◇</span><span>Your image is processed for this request only and is not stored by the application.</span></div>
       </section>
+      </div>
     </main>
 
     <footer>This is an appearance estimate, not verified chronological age. Results can vary with lighting, pose, image quality, and demographic representation. Never use this tool for medical, legal, employment, identity, or eligibility decisions.</footer>
@@ -265,7 +323,7 @@
       event.preventDefault();
       if (!selectedFile) return showError('Upload or take a portrait first.');
       submit.disabled = true;
-      submit.textContent = 'Analyzing portrait…';
+      submit.textContent = 'Consulting the pixels…';
       result.classList.remove('visible');
       error.classList.remove('visible');
       try {
@@ -281,7 +339,7 @@
         showError(requestError.message || 'Could not reach the prediction service.');
       } finally {
         submit.disabled = false;
-        submit.textContent = 'Estimate apparent age';
+        submit.textContent = 'Take your best guess';
       }
     });
 
