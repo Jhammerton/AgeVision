@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
     app.state.predictor = AgePredictor(checkpoint) if checkpoint.exists() else None
     yield
 
-app = FastAPI(title="AgeVision", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="AgeVision", version="1.0.0", lifespan=lifespan)
 
 @app.get("/", include_in_schema=False)
 def index():

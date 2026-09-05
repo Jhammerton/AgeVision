@@ -1,8 +1,9 @@
 Metadata-Version: 2.4
 Name: agevision
-Version: 0.1.0
+Version: 1.0.0
 Summary: Facial apparent-age estimation with PyTorch and FastAPI
 Requires-Python: >=3.10
+License-File: LICENSE
 Requires-Dist: fastapi>=0.110
 Requires-Dist: numpy>=1.24
 Requires-Dist: pandas>=2.0
@@ -16,5 +17,7 @@ Requires-Dist: torchvision>=0.16
 Requires-Dist: uvicorn[standard]>=0.27
 Provides-Extra: dev
 Requires-Dist: httpx>=0.27; extra == "dev"
+Requires-Dist: playwright>=1.48; extra == "dev"
 Requires-Dist: pytest>=7.4; extra == "dev"
 Requires-Dist: ruff>=0.3; extra == "dev"
+Dynamic: license-file

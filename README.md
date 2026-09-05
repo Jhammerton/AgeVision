@@ -1,11 +1,13 @@
 # AgeVision
 
 An end-to-end computer-vision system for estimating **apparent age** from a face image.
-AgeVision supports exact-age regression and age-group classification, reports uncertainty,
-and evaluates errors across age and demographic slices. It is a research/education project,
+AgeVision supports exact-age regression and age-group classification, reports benchmark
+error, and evaluates results across age and demographic slices. It is a research/education project,
 not an identity, eligibility, or medical decision system.
 
 **Live application:** [agevision.onrender.com](https://agevision.onrender.com)
+
+![AgeVision web interface](docs/agevision-ui.png)
 
 ## System
 
@@ -25,11 +27,12 @@ Uploaded image -> YuNet face detection -> FastAPI -> same transforms -> estimate
 - MAE, RMSE, error percentiles, and metrics by age, gender, and ethnicity labels
 - FastAPI image-upload endpoint and browser interface
 - Portrait upload or in-browser camera capture
-- Unit tests, Docker image, and GitHub Actions CI
+- Unit and browser tests, Docker image, and GitHub Actions CI
 
 ## Quick start
 
 1. Use Python 3.10+ and install `pip install -e ".[dev]"`.
+   To run browser tests, also install Chromium with `python -m playwright install chromium`.
 2. Download UTKFace and place its `.jpg` files under `data/raw/UTKFace/`.
 3. Build manifests: `python -m src.ingestion --input data/raw/UTKFace`.
 4. Train: `python -m src.train --task regression --epochs 10`.
@@ -68,11 +71,37 @@ validation-driven learning-rate scheduler, and early stopping. Its best checkpoi
 epoch 12 of a 15-epoch run. Older-adult error remains an important limitation.
 Full overall and sliced metrics are stored in `reports/`.
 
+### Reproduce the deployed experiment
+
+After creating the manifests, run:
+
+```bash
+python -m src.train \
+  --architecture efficientnet_b0 \
+  --task regression \
+  --epochs 15 \
+  --age-weighted-loss \
+  --strong-augmentation \
+  --scheduler-patience 2 \
+  --patience 4 \
+  --output models/efficientnet_b0_improved.pt
+
+python -m src.evaluate \
+  --checkpoint models/efficientnet_b0_improved.pt \
+  --detect-faces \
+  --output reports/efficientnet_b0_improved_deployed_pipeline.json
+```
+
+The selected checkpoint was epoch 12. The run used seed 42 and took approximately
+45 minutes on an NVIDIA GeForce GTX 1080 Ti. See [MODEL_CARD.md](MODEL_CARD.md) for
+the complete training, evaluation, intended-use, and limitation details.
+
 Further model work does not require collecting photographs or ages from application users.
-Possible next experiments include stronger augmentation, learning-rate scheduling, early
-stopping, age-aware loss weighting, and evaluation on an appropriately licensed public age
-dataset. Any candidate should be compared with the deployed checkpoint using the fixed test
-split and per-age-group metrics, especially the 60+ MAE.
+Possible next experiments include a distributional age objective, face-landmark alignment,
+a larger pretrained backbone, and evaluation on an appropriately licensed public age dataset.
+Any candidate should be compared with the deployed checkpoint using the fixed test split and
+per-age-group metrics, especially the 60+ MAE. The benchmark error shown by the app describes
+dataset-level performance and is not calibrated uncertainty for an individual image.
 
 ## Deploy on Render
 
@@ -93,3 +122,9 @@ are stratified by age group where possible. Always report per-slice results alon
 overall score. Predictions describe appearance only and must not be treated as chronological
 age or used for consequential decisions. Uploaded images are processed in memory for the
 prediction request and are not intentionally retained by the application.
+
+## License
+
+AgeVision's original source code is available under the [MIT License](LICENSE). UTKFace,
+YuNet, pretrained torchvision weights, and other dependencies remain subject to their own
+licenses and terms.

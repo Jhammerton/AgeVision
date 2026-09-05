@@ -10,5 +10,6 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -e ".[dev]"
+      - run: python -m playwright install --with-deps chromium
       - run: ruff check src tests
       - run: pytest
