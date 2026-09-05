@@ -60,10 +60,12 @@ Five-epoch regression experiments on the current UTKFace split produced:
 | EfficientNet-B0 | **5.204** | **7.133** | **7.176** |
 | ResNet18 with balanced sampling | 5.296 | 7.470 | 9.289 |
 | EfficientNet-B0, 10-epoch run through YuNet | **4.956** | **7.124** | 8.076 |
+| EfficientNet-B0, weighted loss + stronger augmentation through YuNet | **4.664** | **6.634** | **7.967** |
 
-Moderate balanced sampling did not improve the overall or 60+ result in this run, so
-the epoch-9 EfficientNet-B0 checkpoint from the 10-epoch run is deployed. It improves
-overall and young-adult accuracy, though older-adult error remains an important limitation.
+Moderate balanced sampling did not improve the overall or 60+ result in this run. The
+deployed checkpoint instead uses moderate age-weighted loss, stronger augmentation, a
+validation-driven learning-rate scheduler, and early stopping. Its best checkpoint was
+epoch 12 of a 15-epoch run. Older-adult error remains an important limitation.
 Full overall and sliced metrics are stored in `reports/`.
 
 Further model work does not require collecting photographs or ages from application users.

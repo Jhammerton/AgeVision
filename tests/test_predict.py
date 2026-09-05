@@ -28,8 +28,8 @@ def test_regression_prediction_reports_benchmark_error() -> None:
 
     assert result == {
         "predicted_age": 31.5,
-        "typical_error_years": 5.0,
-        "p90_error_years": 11.6,
+        "typical_error_years": 4.7,
+        "p90_error_years": 10.8,
     }
 
 

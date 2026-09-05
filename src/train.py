@@ -61,6 +61,16 @@ def age_group_sample_weights(age_groups) -> torch.Tensor:
     return counts[groups].double().rsqrt()
 
 
+def age_group_loss_weights(age_groups) -> torch.Tensor:
+    """Return inverse-square-root age-group weights normalized to mean one."""
+    groups = torch.tensor(age_groups, dtype=torch.long)
+    counts = torch.bincount(groups)
+    weights = counts.float().clamp_min(1).rsqrt()
+    present = counts > 0
+    weights[present] /= weights[present].mean()
+    return weights
+
+
 def build_age_group_sampler(
     dataset: FaceAgeDataset,
 ) -> WeightedRandomSampler:
@@ -80,13 +90,20 @@ def train(
     architecture: str,
     output: Path,
     balanced_sampling: bool = False,
+    age_weighted_loss: bool = False,
+    strong_augmentation: bool = False,
+    patience: int = 0,
+    scheduler_patience: int = 2,
 ) -> None:
     settings = load_settings()
     torch.manual_seed(settings.random_state)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = build_model(task, architecture, settings.pretrained).to(device)
-    train_dataset = FaceAgeDataset(PROCESSED_DATA_DIR / "train.csv",
-                                   build_transforms(settings.image_size, True), task)
+    train_dataset = FaceAgeDataset(
+        PROCESSED_DATA_DIR / "train.csv",
+        build_transforms(settings.image_size, True, strong_augmentation),
+        task,
+    )
     validation_dataset = FaceAgeDataset(PROCESSED_DATA_DIR / "validation.csv",
                                         build_transforms(settings.image_size), task)
     loader_options = {
@@ -106,14 +123,31 @@ def train(
         **loader_options,
     )
     validation_loader = DataLoader(validation_dataset, shuffle=False, **loader_options)
-    loss_fn = nn.HuberLoss(delta=5.0) if task == "regression" else nn.CrossEntropyLoss()
+    group_weights = age_group_loss_weights(
+        train_dataset.frame["age_group"].to_numpy()
+    ).to(device)
+    if task == "regression":
+        loss_fn = nn.HuberLoss(delta=5.0, reduction="none")
+    else:
+        loss_fn = nn.CrossEntropyLoss(
+            weight=group_weights if age_weighted_loss else None
+        )
     optimizer = torch.optim.AdamW(model.parameters(), settings.learning_rate,
                                   weight_decay=settings.weight_decay)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="min",
+        factor=0.3,
+        patience=scheduler_patience,
+        min_lr=1e-6,
+    )
     output.parent.mkdir(parents=True, exist_ok=True)
     best_validation = float("inf")
+    epochs_without_improvement = 0
     print(
         f"device={device} architecture={architecture} task={task} "
-        f"balanced_sampling={balanced_sampling}"
+        f"balanced_sampling={balanced_sampling} age_weighted_loss={age_weighted_loss} "
+        f"strong_augmentation={strong_augmentation} patience={patience}"
     )
 
     for epoch in range(epochs):
@@ -125,7 +159,14 @@ def train(
             predictions = model(images)
             if task == "regression":
                 predictions = predictions.squeeze(1)
-            loss = loss_fn(predictions, targets)
+            losses = loss_fn(predictions, targets)
+            if task == "regression" and age_weighted_loss:
+                boundaries = torch.tensor(
+                    settings.age_bins[1:-1], device=device, dtype=targets.dtype
+                )
+                target_groups = torch.bucketize(targets, boundaries)
+                losses = losses * group_weights[target_groups]
+            loss = losses.mean() if losses.ndim else losses
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -154,15 +195,37 @@ def train(
         metric_name = "val_mae" if task == "regression" else "val_error"
         print(
             f"epoch={epoch + 1} train_loss={training_loss:.4f} "
-            f"{metric_name}={validation_metric:.4f}"
+            f"{metric_name}={validation_metric:.4f} "
+            f"lr={optimizer.param_groups[0]['lr']:.2e}"
         )
 
         if validation_metric < best_validation:
             best_validation = validation_metric
-            torch.save({"state_dict": model.state_dict(), "task": task,
-                        "architecture": architecture, "image_size": settings.image_size,
-                        "epoch": epoch + 1, "validation_metric": validation_metric}, output)
+            epochs_without_improvement = 0
+            torch.save(
+                {
+                    "state_dict": model.state_dict(),
+                    "task": task,
+                    "architecture": architecture,
+                    "image_size": settings.image_size,
+                    "epoch": epoch + 1,
+                    "validation_metric": validation_metric,
+                    "balanced_sampling": balanced_sampling,
+                    "age_weighted_loss": age_weighted_loss,
+                    "strong_augmentation": strong_augmentation,
+                    "scheduler_patience": scheduler_patience,
+                    "early_stopping_patience": patience,
+                },
+                output,
+            )
             print(f"saved_best={output}")
+        else:
+            epochs_without_improvement += 1
+
+        scheduler.step(validation_metric)
+        if patience and epochs_without_improvement >= patience:
+            print(f"early_stopping=epoch_{epoch + 1}")
+            break
 
 
 def main() -> None:
@@ -173,15 +236,49 @@ def main() -> None:
     choices=("resnet18", "efficientnet_b0", "small_cnn"),
     default="resnet18",
     )
+    parser.add_argument(
+        "--age-weighted-loss",
+        action="store_true",
+        help="Give underrepresented age groups moderately more influence on the loss",
+    )
+    parser.add_argument(
+        "--strong-augmentation",
+        action="store_true",
+        help="Use realistic color, rotation, translation, and scale augmentation",
+    )
+    parser.add_argument(
+        "--patience",
+        type=int,
+        default=0,
+        help="Stop after this many epochs without improvement; zero disables stopping",
+    )
+    parser.add_argument(
+        "--scheduler-patience",
+        type=int,
+        default=2,
+        help="Epochs without improvement before reducing the learning rate",
+    )
     parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Checkpoint path; defaults to a name based on the selected experiment",
+    )
     parser.add_argument(
         "--balanced-sampling",
         action="store_true",
         help="Moderately oversample underrepresented age groups",
     )
     args = parser.parse_args()
-    suffix = "_balanced" if args.balanced_sampling else ""
-    output = MODEL_DIR / f"{args.architecture}_{args.task}{suffix}.pt"
+    labels = []
+    if args.balanced_sampling:
+        labels.append("balanced")
+    if args.age_weighted_loss:
+        labels.append("weighted")
+    if args.strong_augmentation:
+        labels.append("augmented")
+    suffix = f"_{'_'.join(labels)}" if labels else ""
+    output = args.output or MODEL_DIR / f"{args.architecture}_{args.task}{suffix}.pt"
 
     train(
         args.task,
@@ -189,6 +286,10 @@ def main() -> None:
         args.architecture,
         output,
         args.balanced_sampling,
+        args.age_weighted_loss,
+        args.strong_augmentation,
+        args.patience,
+        args.scheduler_patience,
     )
 
 

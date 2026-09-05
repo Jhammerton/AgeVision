@@ -4,6 +4,7 @@ from torchvision.models import EfficientNet, ResNet
 
 from src.train import (
     SmallAgeCNN,
+    age_group_loss_weights,
     age_group_sample_weights,
     build_model,
 )
@@ -42,3 +43,10 @@ def test_rare_age_groups_receive_larger_sampling_weights() -> None:
 
     assert weights[0].item() == pytest.approx(0.5)
     assert weights[-1].item() == pytest.approx(1.0)
+
+
+def test_rare_age_groups_receive_larger_normalized_loss_weights() -> None:
+    weights = age_group_loss_weights([0, 0, 0, 0, 1])
+
+    assert weights.mean().item() == pytest.approx(1.0)
+    assert weights[1].item() > weights[0].item()

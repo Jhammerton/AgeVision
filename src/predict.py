@@ -8,8 +8,8 @@ from src.config import AGE_BINS, AGE_GROUPS, MODEL_DIR
 from src.preprocessing import build_transforms
 from src.train import build_model
 
-REGRESSION_MAE_YEARS = 5.0
-REGRESSION_P90_ERROR_YEARS = 11.6
+REGRESSION_MAE_YEARS = 4.7
+REGRESSION_P90_ERROR_YEARS = 10.8
 
 
 class AgePredictor:
